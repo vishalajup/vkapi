@@ -1,35 +1,42 @@
-# ASP.NET Core (.NET Framework)
-# Build and test ASP.NET Core projects targeting the full .NET Framework.
-# Add steps that publish symbols, save build artifacts, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
-
 trigger:
 - main
 
 pool:
   #vmImage: 'windows-latest' # 👈 This tells Azure to use your self-hosted agent
-  name: Default # 👈 This tells Azure to use your self-hosted agent
+  name: Default   # 👈 Uses your self-hosted agent
 
 variables:
-  solution: '**/*.sln'
-  buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
 
 steps:
-- task: NuGetToolInstaller@1
-
-- task: NuGetCommand@2
+# Use specific .NET SDK (change version as per your project)
+- task: UseDotNet@2
   inputs:
-    restoreSolution: '$(solution)'
+    packageType: 'sdk'
+    version: '9.x'
+    installationPath: $(Agent.ToolsDirectory)/dotnet
 
-- task: VSBuild@1
-  inputs:
-    solution: '$(solution)'
-    msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:DesktopBuildPackageLocation="$(build.artifactStagingDirectory)\WebApp.zip" /p:DeployIisAppPath="Default Web Site"'
-    platform: '$(buildPlatform)'
-    configuration: '$(buildConfiguration)'
+# Checkout code
+- checkout: self
 
-- task: VSTest@2
+# Restore dependencies
+- script: dotnet restore
+  displayName: 'Restore NuGet Packages'
+
+# Build the solution
+- script: dotnet build --configuration $(buildConfiguration)
+  displayName: 'Build the Application'
+
+# Run tests (if any)
+- script: dotnet test --no-restore --verbosity normal
+  displayName: 'Run Unit Tests'
+
+# Publish app (output WebApp files to staging folder)
+- script: dotnet publish ./vkapi.csproj --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)
+  displayName: 'Publish the Application'
+
+# Upload build artifacts (WebApp.zip for deployment)
+- task: PublishBuildArtifacts@1
   inputs:
-    platform: '$(buildPlatform)'
-    configuration: '$(buildConfiguration)'
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'drop'
