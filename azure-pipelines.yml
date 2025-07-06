@@ -148,6 +148,7 @@ stages:
                   azureSubscription: 'DevOpsAzureService'
                   Action: 'Swap Slots'
                   WebAppName: 'vkapp-prod'
+                  ResourceGroupName: 'vklearn'
                   SourceSlot: 'staging'
                   TargetSlot: 'production'         
 
