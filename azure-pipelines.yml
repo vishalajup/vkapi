@@ -2,8 +2,7 @@ trigger:
 - main
 
 pool:
-  #vmImage: 'windows-latest' # 👈 This tells Azure to use your self-hosted agent 
-  name: Default   # 👈 Uses your self-hosted agent
+  name: Default   # Uses your self-hosted agent
 
 variables:
   buildConfiguration: 'Release'
@@ -17,33 +16,26 @@ stages:
   jobs:
     - job: BuildJob
       steps:
-        # Use specific .NET SDK (change version as per your project)
         - task: UseDotNet@2
           inputs:
             packageType: 'sdk'
             version: '9.x'
             installationPath: $(Agent.ToolsDirectory)/dotnet
 
-        # Checkout code
         - checkout: self
 
-        # Restore dependencies
         - script: dotnet restore
           displayName: 'Restore NuGet Packages'
 
-        # Build the solution
         - script: dotnet build --configuration $(buildConfiguration)
           displayName: 'Build the Application'
 
-        # Run tests (if any)
         - script: dotnet test --no-restore --verbosity normal
           displayName: 'Run Unit Tests'
 
-        # Publish app (output WebApp files to staging folder)
         - script: dotnet publish ./vkapi.csproj --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)
           displayName: 'Publish the Application'
 
-        # Upload build artifacts (WebApp.zip for deployment)
         - task: PublishBuildArtifacts@1
           inputs:
             PathtoPublish: '$(Build.ArtifactStagingDirectory)'
@@ -58,41 +50,13 @@ stages:
   condition: succeeded()
   jobs:
     - deployment: DevDeploy
-      environment: 'dev'  # Create this environment in Azure DevOps
+      environment: 'dev'
       strategy:
         runOnce:
           deploy:
             steps:
               - checkout: none
-              - task: DownloadBuildArtifacts@0
-                inputs:
-                  buildType: 'current'
-                  downloadType: 'single'
-                  artifactName: 'drop'
-                  downloadPath: '$(Pipeline.Workspace)'
 
-                - task: AzureWebApp@1
-                  inputs:
-                    azureSubscription: 'DevOpsAzureService'  # Replace this
-                    appType: 'webApp'
-                    appName: 'vkapp2'             # Replace this
-                    package: '$(Pipeline.Workspace)/drop'
-
-# -----------------------------------
-# 🌐 Stage 3: Deploy to QA (with approval)
-# -----------------------------------
-- stage: DeployQA
-  displayName: 'Deploy to QA'
-  dependsOn: DeployDev
-  condition: succeeded()
-  jobs:
-    - deployment: QADeploy
-      environment: 'qa'  # Create this environment in Azure DevOps
-      strategy:
-        runOnce:
-          deploy:
-            steps:
-              - checkout: none
               - task: DownloadBuildArtifacts@0
                 inputs:
                   buildType: 'current'
@@ -102,26 +66,27 @@ stages:
 
               - task: AzureWebApp@1
                 inputs:
-                  azureSubscription: 'AzureRmServiceConnection'
+                  azureSubscription: 'DevOpsAzureService'  # Replace this
                   appType: 'webApp'
-                  appName: 'vkapp-qa'
+                  appName: 'vkapp2'                        # Replace this
                   package: '$(Pipeline.Workspace)/drop'
 
 # -----------------------------------
-# 🔥 Stage 4: Deploy to Prod (with approval)
+# 🌐 STAGE 3: DEPLOY TO QA
 # -----------------------------------
-- stage: DeployProd
-  displayName: 'Deploy to Prod'
-  dependsOn: DeployQA
+- stage: DeployQA
+  displayName: 'Deploy to QA'
+  dependsOn: DeployDev
   condition: succeeded()
   jobs:
-    - deployment: ProdDeploy
-      environment: 'prod'  # Create this environment in Azure DevOps
+    - deployment: QADeploy
+      environment: 'qa'
       strategy:
         runOnce:
           deploy:
             steps:
               - checkout: none
+
               - task: DownloadBuildArtifacts@0
                 inputs:
                   buildType: 'current'
@@ -129,9 +94,39 @@ stages:
                   artifactName: 'drop'
                   downloadPath: '$(Pipeline.Workspace)'
 
-          - task: AzureWebApp@1
-            inputs:
-              azureSubscription: 'AzureRmServiceConnection'
-              appType: 'webApp'
-              appName: 'vkapp-prod'
-              package: '$(Pipeline.Workspace)/drop'
+              - task: AzureWebApp@1
+                inputs:
+                  azureSubscription: 'DevOpsAzureService'  # Replace this
+                  appType: 'webApp'
+                  appName: 'vkapp-qa'
+                  package: '$(Pipeline.Workspace)/drop'
+
+# -----------------------------------
+# 🔥 STAGE 4: DEPLOY TO PROD
+# -----------------------------------
+- stage: DeployProd
+  displayName: 'Deploy to Prod'
+  dependsOn: DeployQA
+  condition: succeeded()
+  jobs:
+    - deployment: ProdDeploy
+      environment: 'prod'
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              - checkout: none
+
+              - task: DownloadBuildArtifacts@0
+                inputs:
+                  buildType: 'current'
+                  downloadType: 'single'
+                  artifactName: 'drop'
+                  downloadPath: '$(Pipeline.Workspace)'
+
+              - task: AzureWebApp@1
+                inputs:
+                  azureSubscription: 'DevOpsAzureService'  # Replace this
+                  appType: 'webApp'
+                  appName: 'vkapp-prod'
+                  package: '$(Pipeline.Workspace)/drop'
