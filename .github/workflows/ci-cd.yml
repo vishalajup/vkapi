@@ -28,7 +28,7 @@ jobs:
       run: dotnet test --no-build --verbosity normal
 
     - name: Publish
-      run: dotnet publish -c Release -o publish_output
+      run: dotnet publish ./vkapi.csproj -c Release -o publish_output
 
     - name: Deploy to Azure Web App
       uses: azure/webapps-deploy@v2
