@@ -132,9 +132,35 @@ stages:
                   slotName: 'staging'    
                   package: '$(Pipeline.Workspace)/drop'
               - script: |
-                    echo "Running smoke tests on staging slot..."
-                    curl -k --fail https://vkapp-prod-staging-b9gsgzbeexdfdnep.canadacentral-01.azurewebsites.net/health || exit 1
-                displayName: 'Smoke Test: Health Check'
+                echo "🧪 Starting smoke test with curl and retry logic..."
+                url="https://vkapp-prod-staging-b9gsgzbeexdfdnep.canadacentral-01.azurewebsites.net/health"
+                max_retries=3
+                delay=5
+                count=1
+                success=false
+
+                while [ $count -le $max_retries ]; do
+                  echo "Attempt $count of $max_retries..."
+                  curl -fk --silent --show-error "$url"
+                  if [ $? -eq 0 ]; then
+                    echo "✅ Smoke test passed!"
+                    success=true
+                    break
+                  else
+                    echo "❌ Attempt $count failed"
+                  fi
+                  count=$((count + 1))
+                  if [ $count -le $max_retries ]; then
+                    echo "Retrying in $delay seconds..."
+                    sleep $delay
+                  fi
+                done
+
+                if [ "$success" = false ]; then
+                  echo "❌ Smoke test failed after $max_retries attempts"
+                  exit 1
+                fi
+              displayName: 'Smoke Test with Retry (curl)'
 
 
 - stage: SwapToProd
