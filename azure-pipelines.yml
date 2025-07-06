@@ -16,7 +16,7 @@ stages:
   displayName: 'Build and Test'
   jobs:
     - job: BuildJob
-        steps:
+      steps:
         # Use specific .NET SDK (change version as per your project)
         - task: UseDotNet@2
           inputs:
@@ -53,14 +53,14 @@ stages:
 # ✅ STAGE 2: DEPLOY TO AZURE
 # ----------------------------
 - stage: Deploy
-    displayName: 'Deploy to Azure Web App'
-    dependsOn: Build
-    condition: succeeded()
-    jobs:
-        - job: DeployJob
-        steps:
+  displayName: 'Deploy to Azure Web App'
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+    - job: DeployJob
+      steps:
         - task: AzureWebApp@1
-            inputs:
+          inputs:
             azureSubscription: 'DevOpsAzureService'  # Replace this
             appType: 'webApp'
             appName: 'vkapp2'             # Replace this
