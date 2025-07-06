@@ -50,27 +50,26 @@ stages:
             ArtifactName: 'drop'
 
 # ----------------------------
-# ✅ STAGE 2: DEPLOY TO AZURE
+# ✅ STAGE 2: DEPLOY TO DEV
 # ----------------------------
 - stage: DeployDev
-  displayName: 'Deploy to Azure Web App'
+  displayName: 'Deploy to Dev'
   dependsOn: Build
   condition: succeeded()
   jobs:
-    - job: DevDeploy
-      environment: 'dev'  # 👈 This enables the Environments feature
+    - deployment: DevDeploy
+      environment: 'dev'  # Create this environment in Azure DevOps
       strategy:
         runOnce:
-            deploy:
-              steps:
-                - checkout: none  # 👈 disables unnecessary checkout
-  
-                - task: DownloadBuildArtifacts@0
-                  inputs:
-                    buildType: 'current'
-                    downloadType: 'single'
-                    artifactName: 'drop'
-                    downloadPath: '$(Pipeline.Workspace)'
+          deploy:
+            steps:
+            - checkout: none
+            - task: DownloadBuildArtifacts@0
+              inputs:
+                buildType: 'current'
+                downloadType: 'single'
+                artifactName: 'drop'
+                downloadPath: '$(Pipeline.Workspace)'
 
                 - task: AzureWebApp@1
                   inputs:
@@ -87,19 +86,19 @@ stages:
   dependsOn: DeployDev
   condition: succeeded()
   jobs:
-  - deployment: QADeploy
-    environment: 'qa'  # 👈 Will prompt for approval before running
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - checkout: none
-          - task: DownloadBuildArtifacts@0
-            inputs:
-              buildType: 'current'
-              downloadType: 'single'
-              artifactName: 'drop'
-              downloadPath: '$(Pipeline.Workspace)'
+    - deployment: QADeploy
+      environment: 'qa'  # Create this environment in Azure DevOps
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            - checkout: none
+            - task: DownloadBuildArtifacts@0
+              inputs:
+                buildType: 'current'
+                downloadType: 'single'
+                artifactName: 'drop'
+                downloadPath: '$(Pipeline.Workspace)'
 
           - task: AzureWebApp@1
             inputs:
@@ -116,19 +115,19 @@ stages:
   dependsOn: DeployQA
   condition: succeeded()
   jobs:
-  - deployment: ProdDeploy
-    environment: 'prod'
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - checkout: none
-          - task: DownloadBuildArtifacts@0
-            inputs:
-              buildType: 'current'
-              downloadType: 'single'
-              artifactName: 'drop'
-              downloadPath: '$(Pipeline.Workspace)'
+    - deployment: ProdDeploy
+      environment: 'prod'  # Create this environment in Azure DevOps
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            - checkout: none
+            - task: DownloadBuildArtifacts@0
+              inputs:
+                buildType: 'current'
+                downloadType: 'single'
+                artifactName: 'drop'
+                downloadPath: '$(Pipeline.Workspace)'
 
           - task: AzureWebApp@1
             inputs:
