@@ -59,6 +59,8 @@ stages:
   jobs:
     - job: DeployJob
       steps:
+        - checkout: none  # 👈 disables unnecessary checkout
+  
         - task: DownloadBuildArtifacts@0
           inputs:
             buildType: 'current'
