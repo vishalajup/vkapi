@@ -8,35 +8,60 @@ pool:
 variables:
   buildConfiguration: 'Release'
 
-steps:
-# Use specific .NET SDK (change version as per your project)
-- task: UseDotNet@2
-  inputs:
-    packageType: 'sdk'
-    version: '9.x'
-    installationPath: $(Agent.ToolsDirectory)/dotnet
+stages:
+# ----------------------------
+# ✅ STAGE 1: BUILD & PUBLISH
+# ----------------------------
+- stage: Build
+  displayName: 'Build and Test'
+  jobs:
+    - job: BuildJob
+        steps:
+        # Use specific .NET SDK (change version as per your project)
+        - task: UseDotNet@2
+          inputs:
+            packageType: 'sdk'
+            version: '9.x'
+            installationPath: $(Agent.ToolsDirectory)/dotnet
 
-# Checkout code
-- checkout: self
+        # Checkout code
+        - checkout: self
 
-# Restore dependencies
-- script: dotnet restore
-  displayName: 'Restore NuGet Packages'
+        # Restore dependencies
+        - script: dotnet restore
+          displayName: 'Restore NuGet Packages'
 
-# Build the solution
-- script: dotnet build --configuration $(buildConfiguration)
-  displayName: 'Build the Application'
+        # Build the solution
+        - script: dotnet build --configuration $(buildConfiguration)
+          displayName: 'Build the Application'
 
-# Run tests (if any)
-- script: dotnet test --no-restore --verbosity normal
-  displayName: 'Run Unit Tests'
+        # Run tests (if any)
+        - script: dotnet test --no-restore --verbosity normal
+          displayName: 'Run Unit Tests'
 
-# Publish app (output WebApp files to staging folder)
-- script: dotnet publish ./vkapi.csproj --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)
-  displayName: 'Publish the Application'
+        # Publish app (output WebApp files to staging folder)
+        - script: dotnet publish ./vkapi.csproj --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)
+          displayName: 'Publish the Application'
 
-# Upload build artifacts (WebApp.zip for deployment)
-- task: PublishBuildArtifacts@1
-  inputs:
-    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-    ArtifactName: 'drop'
+        # Upload build artifacts (WebApp.zip for deployment)
+        - task: PublishBuildArtifacts@1
+          inputs:
+            PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+            ArtifactName: 'drop'
+
+# ----------------------------
+# ✅ STAGE 2: DEPLOY TO AZURE
+# ----------------------------
+- stage: Deploy
+    displayName: 'Deploy to Azure Web App'
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+        - job: DeployJob
+        steps:
+        - task: AzureWebApp@1
+            inputs:
+            azureSubscription: 'DevOpsAzureService'  # Replace this
+            appType: 'webApp'
+            appName: 'vkapp2'             # Replace this
+            package: '$(Pipeline.Workspace)/drop'
