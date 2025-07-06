@@ -129,7 +129,7 @@ stages:
                   azureSubscription: 'DevOpsAzureService'  # Replace this
                   appType: 'webApp'
                   appName: 'vkapp-prod'
-                  **slotName: 'staging'**      # 👈 key line: deploy to slot
+                  slotName: 'staging'    
                   package: '$(Pipeline.Workspace)/drop'
 
 - stage: SwapToProd
