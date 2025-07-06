@@ -52,24 +52,87 @@ stages:
 # ----------------------------
 # ✅ STAGE 2: DEPLOY TO AZURE
 # ----------------------------
-- stage: Deploy
+- stage: DeployDev
   displayName: 'Deploy to Azure Web App'
   dependsOn: Build
   condition: succeeded()
   jobs:
-    - job: DeployJob
-      steps:
-        - checkout: none  # 👈 disables unnecessary checkout
+    - job: DevDeploy
+      environment: 'dev'  # 👈 This enables the Environments feature
+      strategy:
+        runOnce:
+            deploy:
+              steps:
+                - checkout: none  # 👈 disables unnecessary checkout
   
-        - task: DownloadBuildArtifacts@0
-          inputs:
-            buildType: 'current'
-            downloadType: 'single'
-            artifactName: 'drop'
-            downloadPath: '$(Pipeline.Workspace)'
-        - task: AzureWebApp@1
-          inputs:
-            azureSubscription: 'DevOpsAzureService'  # Replace this
-            appType: 'webApp'
-            appName: 'vkapp2'             # Replace this
-            package: '$(Pipeline.Workspace)/drop'
+                - task: DownloadBuildArtifacts@0
+                  inputs:
+                    buildType: 'current'
+                    downloadType: 'single'
+                    artifactName: 'drop'
+                    downloadPath: '$(Pipeline.Workspace)'
+
+                - task: AzureWebApp@1
+                  inputs:
+                    azureSubscription: 'DevOpsAzureService'  # Replace this
+                    appType: 'webApp'
+                    appName: 'vkapp2'             # Replace this
+                    package: '$(Pipeline.Workspace)/drop'
+
+# -----------------------------------
+# 🌐 Stage 3: Deploy to QA (with approval)
+# -----------------------------------
+- stage: DeployQA
+  displayName: 'Deploy to QA'
+  dependsOn: DeployDev
+  condition: succeeded()
+  jobs:
+  - deployment: QADeploy
+    environment: 'qa'  # 👈 Will prompt for approval before running
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: none
+          - task: DownloadBuildArtifacts@0
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'drop'
+              downloadPath: '$(Pipeline.Workspace)'
+
+          - task: AzureWebApp@1
+            inputs:
+              azureSubscription: 'AzureRmServiceConnection'
+              appType: 'webApp'
+              appName: 'vkapp-qa'
+              package: '$(Pipeline.Workspace)/drop'
+
+# -----------------------------------
+# 🔥 Stage 4: Deploy to Prod (with approval)
+# -----------------------------------
+- stage: DeployProd
+  displayName: 'Deploy to Prod'
+  dependsOn: DeployQA
+  condition: succeeded()
+  jobs:
+  - deployment: ProdDeploy
+    environment: 'prod'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: none
+          - task: DownloadBuildArtifacts@0
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'drop'
+              downloadPath: '$(Pipeline.Workspace)'
+
+          - task: AzureWebApp@1
+            inputs:
+              azureSubscription: 'AzureRmServiceConnection'
+              appType: 'webApp'
+              appName: 'vkapp-prod'
+              package: '$(Pipeline.Workspace)/drop'
