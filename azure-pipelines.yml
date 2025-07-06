@@ -137,13 +137,18 @@ stages:
   dependsOn: DeployProd
   condition: succeeded()
   jobs:
-    - job: SwapJob
+    - deployment: SwapJob
       environment: 'prod'
-      steps:
-        - task: AzureAppServiceManage@0
-          inputs:
-            azureSubscription: 'DevOpsAzureService'
-            Action: 'Swap Slots'
-            WebAppName: 'vkapp-prod'
-            SourceSlot: 'staging'
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              - task: AzureAppServiceManage@0
+                inputs:
+                  azureSubscription: 'DevOpsAzureService'
+                  Action: 'Swap Slots'
+                  WebAppName: 'vkapp-prod'
+                  SourceSlot: 'staging'
+                  TargetSlot: 'production'         
+
 
