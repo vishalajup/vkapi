@@ -105,7 +105,7 @@ stages:
 # 🔥 STAGE 4: DEPLOY TO PROD
 # -----------------------------------
 - stage: DeployProd
-  displayName: 'Deploy to Prod'
+  displayName: 'Deploy to Prod Staging'
   dependsOn: DeployQA
   condition: succeeded()
   jobs:
@@ -131,6 +131,11 @@ stages:
                   appName: 'vkapp-prod'
                   slotName: 'staging'    
                   package: '$(Pipeline.Workspace)/drop'
+              - script: |
+                    echo "Running smoke tests on staging slot..."
+                    curl --fail https://vkapp-prod-hbamc6fvhtcpahha.canadacentral-01.azurewebsites.net/health || exit 1
+                displayName: 'Smoke Test: Health Check'
+
 
 - stage: SwapToProd
   displayName: 'Swap Slot to Prod'
