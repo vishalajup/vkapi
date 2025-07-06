@@ -7,7 +7,8 @@ trigger:
 - main
 
 pool:
-  vmImage: 'windows-latest'
+  #vmImage: 'windows-latest' # 👈 This tells Azure to use your self-hosted agent
+  vmImage: 'Default' # 👈 This tells Azure to use your self-hosted agent
 
 variables:
   solution: '**/*.sln'
