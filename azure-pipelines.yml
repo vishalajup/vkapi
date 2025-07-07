@@ -132,35 +132,35 @@ stages:
                   slotName: 'staging'    
                   package: '$(Pipeline.Workspace)/drop'
               - script: |
-                    echo "🧪 Starting smoke test with curl and retry logic..."
-                    url="https://vkapp-prod-staging-b9gsgzbeexdfdnep.canadacentral-01.azurewebsites.net/health"
-                    max_retries=3
-                    delay=5
-                    count=1
-                    success=false
+                echo 🧪 Starting smoke test with curl retry logic (CMD)...
 
-                    while [ $count -le $max_retries ]; do
-                      echo "Attempt $count of $max_retries..."
-                      curl -fk --silent --show-error "$url"
-                      if [ $? -eq 0 ]; then
-                        echo "✅ Smoke test passed!"
-                        success=true
-                        break
-                      else
-                        echo "❌ Attempt $count failed"
-                      fi
-                      count=$((count + 1))
-                      if [ $count -le $max_retries ]; then
-                        echo "Retrying in $delay seconds..."
-                        sleep $delay
-                      fi
-                    done
+                set url=https://vkapp-prod-staging-b9gsgzbeexdfdnep.canadacentral-01.azurewebsites.net/health
+                set max_retries=3
+                set delay=5
+                set count=1
 
-                    if [ "$success" = false ]; then
-                      echo "❌ Smoke test failed after $max_retries attempts"
-                      exit 1
-                    fi
-                displayName: 'Smoke Test with Retry (curl)'
+                :retry
+                echo Attempt %count% of %max_retries%...
+                curl -fk --silent --show-error %url%
+                if %ERRORLEVEL% EQU 0 (
+                    echo ✅ Smoke test passed!
+                    goto end
+                ) else (
+                    echo ❌ Attempt %count% failed.
+                    set /a count+=1
+                    if %count% LEQ %max_retries% (
+                        echo Retrying in %delay% seconds...
+                        timeout /t %delay% > nul
+                        goto retry
+                    ) else (
+                        echo ❌ Smoke test failed after %max_retries% attempts.
+                        exit /b 1
+                    )
+                )
+
+                :end
+                displayName: 'Smoke Test with Retry (CMD - Windows)'
+
 
 
 - stage: SwapToProd
