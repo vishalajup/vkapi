@@ -159,7 +159,7 @@ stages:
                     )
 
                     :end
-                    displayName: 'Smoke Test with Retry (CMD - Windows)'
+                displayName: 'Smoke Test with Retry (CMD - Windows)'
 
 
 
